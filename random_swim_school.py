@@ -26,8 +26,8 @@ class RandomFigureEight:
         self.move_cmd.angular.z = random.uniform(1.0, 3.0)  # Random angular velocity [1.0, 3.0]
 
         # Generate random starting position for the center of the figure eight
-        self.center_x = random.uniform(1.0, 10.0)  # Random x between 1 and 10
-        self.center_y = random.uniform(1.0, 10.0)  # Random y between 1 and 10
+        self.center_x = random.uniform(3.0, 8.0)  # Random x between 1 and 10
+        self.center_y = random.uniform(3.0, 8.0)  # Random y between 1 and 10
 
         # Threshold to determine if turtle is close to the center
         self.position_threshold = 0.05  # Small threshold for detecting the center
