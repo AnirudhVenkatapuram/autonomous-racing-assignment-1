@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist
-from turtlesim.srv import TeleportAbsolute  # Import the service definition
+from turtlesim.srv import TeleportAbsolute, SetPen  # Import service definitions
 import math  # Import math to use pi
 
 class SwimSchool:
@@ -27,8 +27,10 @@ class SwimSchool:
         rospy.loginfo(f"Linear velocity set to {linear_velocity}")
         rospy.loginfo(f"Angular velocity set to {angular_velocity}")
 
-        # Teleport the turtle to a starting position without changing orientation
+        # Disable the pen before teleporting to avoid drawing lines
+        self.set_pen(0, 0, 0, 0, 1)  # Disable the pen
         self.teleport_turtle(5.5, 8.0)  # x=5.5, y=8.0 (Lower starting point)
+        self.set_pen(255, 255, 255, 3, 0)  # Enable the pen back with default color and width
 
         # Store the initial position for resetting later
         self.initial_x = 5.5
@@ -66,9 +68,20 @@ class SwimSchool:
 
             # Reset turtle position every 2 full loops to avoid drift
             if loops_completed == 2:
-                # Teleport to the initial position and reset orientation after each figure-eight
-                self.teleport_turtle(self.initial_x, self.initial_y, self.initial_theta)
+                self.set_pen(0, 0, 0, 0, 1)  # Disable the pen before teleporting
+                self.teleport_turtle(self.initial_x, self.initial_y, self.initial_theta)  # Reset to initial position
+                self.set_pen(255, 255, 255, 3, 0)  # Enable the pen back
                 loops_completed = 0  # Reset the counter after a complete figure-eight
+
+    def set_pen(self, r, g, b, width, off):
+        """ Set the pen color, width, and turn it on/off. """
+        rospy.wait_for_service('/turtle1/set_pen')
+        try:
+            pen_service = rospy.ServiceProxy('/turtle1/set_pen', SetPen)
+            pen_service(r, g, b, width, off)
+            rospy.loginfo(f"Pen set: color=({r}, {g}, {b}), width={width}, off={off}")
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Service call failed: {e}")
 
     def teleport_turtle(self, x, y, theta=0):
         """ Teleport the turtle to a specific location with orientation (default is 0). """
@@ -76,7 +89,7 @@ class SwimSchool:
         try:
             teleport_service = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
             teleport_service(x, y, theta)
-            rospy.loginfo(f"Turtle teleported to x: {x}, y: {y}")
+            rospy.loginfo(f"Turtle teleported to x: {x}, y: {y}, theta: {theta}")
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
 
