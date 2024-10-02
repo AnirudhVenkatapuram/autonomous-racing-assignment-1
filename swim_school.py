@@ -30,6 +30,11 @@ class SwimSchool:
         # Teleport the turtle to a starting position without changing orientation
         self.teleport_turtle(5.5, 8.0, -(math.pi))  # x=5.5, y=8.0 (Lower starting point)
 
+        # Store the initial position for resetting later
+        self.initial_x = 5.5
+        self.initial_y = 8.0
+        self.initial_theta = 0
+
         # Calculate the duration based on angular velocity
         T = 2 * math.pi / angular_velocity  # Time for one full circle
         half_duration = T / 2  # Time for half of the figure-eight
@@ -44,16 +49,24 @@ class SwimSchool:
 
         # Loop to move the turtle in a figure-eight pattern
         is_first_half_loop = True  # Track if we are doing the first half-loop or full loops
+        loops_completed = 0  # Counter to track completed loops
         while not rospy.is_shutdown():
             if is_first_half_loop:
                 # After the first half-loop, change direction to complete the first loop
                 move_cmd.angular.z = -move_cmd.angular.z  # Reverse angular direction
                 is_first_half_loop = False  # Switch to normal full loop mode
                 self.publish_move_cmd_for_duration(move_cmd, half_duration)  # Complete first loop
+                loops_completed += 1
             else:
                 # Continue switching direction every full duration (T)
                 move_cmd.angular.z = -move_cmd.angular.z  # Reverse angular direction every T seconds
                 self.publish_move_cmd_for_duration(move_cmd, T)  # Complete each full loop
+                loops_completed += 1
+
+            # Reset turtle position every 2 full loops to avoid drift
+            if loops_completed >= 2:
+                self.teleport_turtle(self.initial_x, self.initial_y, self.initial_theta)
+                loops_completed = 0  # Reset the counter
 
     def teleport_turtle(self, x, y, theta=0):
         """ Teleport the turtle to a specific location with orientation (default is 0). """
