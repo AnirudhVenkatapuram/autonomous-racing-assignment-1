@@ -18,14 +18,14 @@ class PositionBasedFigureEight:
         self.turtle_pose = Pose()
         self.reached_center = False  # Keeps track of whether the turtle is near the center
 
+        # Center position coordinates of the turtlesim
+        self.center_x = 5.5  # Initialize center_x attribute
+        self.center_y = 5.5  # Initialize center_y attribute
+
         # Get user input for linear and angular velocities
         self.move_cmd = Twist()
         self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
         self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
-
-        # Center position coordinates of the turtlesim
-        self.center_x = 5.5
-        self.center_y = 5.5
 
         # Threshold to determine if turtle is close to the center
         self.position_threshold = 0.05  # Small threshold for detecting the center
