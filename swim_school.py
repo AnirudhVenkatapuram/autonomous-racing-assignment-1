@@ -28,7 +28,7 @@ class SwimSchool:
         rospy.loginfo(f"Angular velocity set to {angular_velocity}")
 
         # Teleport the turtle to a starting position without changing orientation
-        self.teleport_turtle(5.5, 8.0, -(math.pi))  # x=5.5, y=8.0 (Lower starting point)
+        self.teleport_turtle(5.5, 8.0)  # x=5.5, y=8.0 (Lower starting point)
 
         # Store the initial position for resetting later
         self.initial_x = 5.5
@@ -50,23 +50,25 @@ class SwimSchool:
         # Loop to move the turtle in a figure-eight pattern
         is_first_half_loop = True  # Track if we are doing the first half-loop or full loops
         loops_completed = 0  # Counter to track completed loops
+
         while not rospy.is_shutdown():
             if is_first_half_loop:
-                # After the first half-loop, change direction to complete the first loop
+                # After the first half-loop, change direction to complete the first full loop
                 move_cmd.angular.z = -move_cmd.angular.z  # Reverse angular direction
-                is_first_half_loop = False  # Switch to normal full loop mode
-                self.publish_move_cmd_for_duration(move_cmd, half_duration)  # Complete first loop
+                self.publish_move_cmd_for_duration(move_cmd, half_duration)  # Complete the first loop
+                is_first_half_loop = False  # Switch to full loop mode after the first full loop
                 loops_completed += 1
             else:
-                # Continue switching direction every full duration (T)
-                move_cmd.angular.z = -move_cmd.angular.z  # Reverse angular direction every T seconds
-                self.publish_move_cmd_for_duration(move_cmd, T)  # Complete each full loop
+                # Continue switching direction every full duration (T) to maintain a figure-eight
+                move_cmd.angular.z = -move_cmd.angular.z  # Reverse angular direction
+                self.publish_move_cmd_for_duration(move_cmd, T)  # Complete a full loop
                 loops_completed += 1
 
             # Reset turtle position every 2 full loops to avoid drift
-            if loops_completed >= 2:
+            if loops_completed == 2:
+                # Teleport to the initial position and reset orientation after each figure-eight
                 self.teleport_turtle(self.initial_x, self.initial_y, self.initial_theta)
-                loops_completed = 0  # Reset the counter
+                loops_completed = 0  # Reset the counter after a complete figure-eight
 
     def teleport_turtle(self, x, y, theta=0):
         """ Teleport the turtle to a specific location with orientation (default is 0). """
