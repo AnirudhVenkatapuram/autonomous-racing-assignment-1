@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist
-from turtlesim.msg import Pose
+import math
 
 class FigureEightMover:
     def __init__(self):
@@ -11,62 +11,53 @@ class FigureEightMover:
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
 
-        # Create a subscriber to the /turtle1/pose topic to get the turtle's position
-        rospy.Subscriber('/turtle1/pose', Pose, self.pose_callback)
-
-        # Initialize position variables
-        self.turtle_pose = Pose()
+        # Set the rate at which to send commands (100 Hz)
+        rate = rospy.Rate(100)  # 100 Hz
 
         # Create the Twist message to control the turtle
         self.move_cmd = Twist()
+        stop_cmd = Twist()  # A Twist message to stop the turtle
 
         # Set initial linear and angular velocities
         self.move_cmd.linear.x = 2.0
         self.move_cmd.angular.z = 1.0
 
-        # Set flags to track which part of the figure-eight we're in
-        self.switch_to_bottom_circle = False
-        self.switch_to_top_circle = False
+        # High precision value of Pi
+        pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899
 
-        # Start the turtle movement
-        rospy.loginfo("Starting figure-eight movement...")
+        # Time required to complete one full circle using high precision pi
+        self.T = 2 * pi / self.move_cmd.angular.z
 
-        # Start the loop to keep moving the turtle
-        self.keep_moving()
+        # Counter to keep track of completed circles
+        self.circles_completed = 0
 
-    def pose_callback(self, data):
-        """ Callback function to get the current position of the turtle. """
-        self.turtle_pose = data
-
-        # Check for position thresholds to switch direction
-        self.check_position_and_switch()
-
-    def check_position_and_switch(self):
-        """ Check the turtle's position and switch direction if necessary. """
-        # Get the current position of the turtle
-        x = self.turtle_pose.x
-        y = self.turtle_pose.y
-
-        # If the turtle is at the top of the figure-eight (near y=10), switch to bottom circle
-        if y >= 10.5 and not self.switch_to_bottom_circle:
-            self.move_cmd.angular.z = -self.move_cmd.angular.z
-            self.switch_to_bottom_circle = True
-            self.switch_to_top_circle = False
-            rospy.loginfo("Switched to bottom circle. Current position: x={}, y={}".format(x, y))
-
-        # If the turtle is at the bottom of the figure-eight (near y=2), switch to top circle
-        if y <= 1.5 and not self.switch_to_top_circle:
-            self.move_cmd.angular.z = -self.move_cmd.angular.z
-            self.switch_to_top_circle = True
-            self.switch_to_bottom_circle = False
-            rospy.loginfo("Switched to top circle. Current position: x={}, y={}".format(x, y))
-
-    def keep_moving(self):
-        """ Keep publishing the move command indefinitely. """
-        rate = rospy.Rate(100)  # Increase rate to 100 Hz for smoother control
+        # Loop to move the turtle
+        start_time = rospy.Time.now()
         while not rospy.is_shutdown():
-            # Publish the move command to make the turtle move
+            elapsed_time = (rospy.Time.now() - start_time).to_sec()
+
+            # Publish the move command to make the turtle move in a circle
             self.cmd_vel.publish(self.move_cmd)
+
+            # Check if one full circle is completed (elapsed_time >= T)
+            if elapsed_time >= self.T:
+                # Stop the turtle briefly
+                rospy.loginfo(f"Completed {self.circles_completed + 1} circle(s). Stopping briefly...")
+                self.cmd_vel.publish(stop_cmd)  # Stop the turtle
+                rospy.sleep(0.1)  # Wait for 0.1 seconds
+
+                # Switch angular velocity to reverse direction
+                self.move_cmd.angular.z = -self.move_cmd.angular.z
+
+                # Increment the circle counter
+                self.circles_completed += 1
+
+                # Reset the start time for the next circle
+                start_time = rospy.Time.now()
+
+                # Log the completion of a circle and direction switch
+                rospy.loginfo(f"Switching direction. Circles completed: {self.circles_completed}")
+
             rate.sleep()
 
     def shutdown(self):
