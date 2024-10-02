@@ -18,17 +18,25 @@ class PositionBasedFigureEight:
         self.turtle_pose = Pose()
         self.reached_center = False  # Keeps track of whether the turtle is near the center
 
+        # Define position threshold early to avoid attribute errors
+        self.position_threshold = 0.05  # Small threshold for detecting the center
+
         # Center position coordinates of the turtlesim
         self.center_x = 5.5  # Initialize center_x attribute
         self.center_y = 5.5  # Initialize center_y attribute
 
-        # Get user input for linear and angular velocities
+        # Use default values for linear and angular velocities or command-line arguments
         self.move_cmd = Twist()
-        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
-        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
-
-        # Threshold to determine if turtle is close to the center
-        self.position_threshold = 0.05  # Small threshold for detecting the center
+        # If input() is not available, use default values
+        try:
+            self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
+            self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
+        except EOFError:
+            # Default values if input is not possible
+            self.move_cmd.linear.x = 3.0
+            self.move_cmd.angular.z = 1.5
+            rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
+                          f"angular velocity = {self.move_cmd.angular.z}")
 
         # Start the turtle movement
         rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
