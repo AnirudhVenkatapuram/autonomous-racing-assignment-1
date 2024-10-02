@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist
-import math
 
 class FigureEightMover:
     def __init__(self):
@@ -25,8 +24,11 @@ class FigureEightMover:
         move_cmd.linear.x = linear_velocity
         move_cmd.angular.z = angular_velocity
 
-        # Time required to complete one full circle
-        T = 2 * math.pi / angular_velocity
+        # High precision value of Pi with many decimal points
+        pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899
+
+        # Time required to complete one full circle using high precision pi
+        T = 2 * pi / angular_velocity
 
         # Counter to keep track of completed circles
         circles_completed = 0
@@ -39,8 +41,8 @@ class FigureEightMover:
             # Publish the move command to make the turtle move in a circle
             self.cmd_vel.publish(move_cmd)
 
-            # Check if one full circle is completed (elapsed_time >= T)
-            if elapsed_time >= T:
+            # Check if one full circle is completed (add a small buffer to the threshold)
+            if elapsed_time >= T + 0.05:  # Adjust the threshold slightly to ensure a complete circle
                 # Switch angular velocity to reverse direction
                 move_cmd.angular.z = -move_cmd.angular.z
                 # Reset the start time for the next circle
@@ -51,7 +53,6 @@ class FigureEightMover:
                 # Log the completion of a circle
                 rospy.loginfo(f"Completed circles: {circles_completed}")
 
-            # After completing two circles, continue switching back and forth to maintain the figure-eight pattern
             rate.sleep()
 
     def shutdown(self):
