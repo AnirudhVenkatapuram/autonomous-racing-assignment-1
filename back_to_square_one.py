@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist
-from turtlesim.srv import SetPen, TeleportAbsolute
+from turtlesim.srv import SetPen, TeleportAbsolute, TeleportRelative
 from std_srvs.srv import Empty
 
 class SquareDrawer:
@@ -16,11 +16,13 @@ class SquareDrawer:
         rospy.wait_for_service('/clear')
         rospy.wait_for_service('/turtle1/set_pen')
         rospy.wait_for_service('/turtle1/teleport_absolute')
+        rospy.wait_for_service('/turtle1/teleport_relative')
 
         # Create service proxies
         self.clear_bg = rospy.ServiceProxy('/clear', Empty)
         self.set_pen = rospy.ServiceProxy('/turtle1/set_pen', SetPen)
         self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
+        self.teleport_relative = rospy.ServiceProxy('/turtle1/teleport_relative', TeleportRelative)
 
         # Get user input for the square's side length
         self.side_length = self.get_user_input("Enter the length of the side of the square (1 to 5): ", 1.0, 5.0)
@@ -94,10 +96,6 @@ class SquareDrawer:
         # Time to travel one side of the square
         side_time = side_length / linear_speed
 
-        # Set the angular speed and time to make a 90 degree turn
-        angular_speed = 1.0  # Angular speed in radians/second
-        move_cmd.angular.z = 0.0  # No angular movement initially
-
         rate = rospy.Rate(10)  # 10 Hz rate
 
         for _ in range(4):  # Draw 4 sides of the square
@@ -110,22 +108,16 @@ class SquareDrawer:
                 self.cmd_vel.publish(move_cmd)
                 rate.sleep()
 
-            # Stop briefly before turning
+            # Stop the turtle before making a turn
             move_cmd.linear.x = 0.0
             self.cmd_vel.publish(move_cmd)
-            rospy.sleep(0.1)  # Pause for a short moment before turning
+            rospy.sleep(0.1)  # Pause briefly before turning
 
-            # Make a 90 degree turn
-            move_cmd.angular.z = angular_speed  # Rotate at a constant angular speed
-            turn_time = 1.5708 / angular_speed  # 90 degrees = π/2 = 1.5708 radians
-            t0 = rospy.Time.now().to_sec()
-            while (rospy.Time.now().to_sec() - t0) < turn_time:
-                self.cmd_vel.publish(move_cmd)
-                rate.sleep()
-
-            # Stop briefly after turning
-            move_cmd.angular.z = 0.0
-            self.cmd_vel.publish(move_cmd)
+            # Use teleport_relative to make a precise 90 degree turn
+            try:
+                self.teleport_relative(0, 1.5708)  # 90 degrees = π/2 = 1.5708 radians
+            except rospy.ServiceException as e:
+                rospy.logerr(f"Failed to teleport turtle for turning: {e}")
             rospy.sleep(0.1)  # Pause briefly after each turn
 
     def stop_turtle(self):
