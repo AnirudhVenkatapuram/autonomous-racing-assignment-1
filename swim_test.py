@@ -30,7 +30,7 @@ class PositionBasedFigureEight:
         self.center_y = 5.5
 
         # Threshold to determine if turtle is close to the center
-        self.position_threshold = 0.02
+        self.position_threshold = 0.04
 
         # Start the turtle movement
         rospy.loginfo("Starting figure-eight movement using position-based switching...")
