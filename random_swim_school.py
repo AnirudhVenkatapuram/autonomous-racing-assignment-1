@@ -2,7 +2,7 @@
 import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
-from turtlesim.srv import TeleportAbsolute
+from turtlesim.srv import TeleportAbsolute, SetPen
 import random
 
 class RandomFigureEight:
@@ -35,7 +35,7 @@ class RandomFigureEight:
         # Display the random center position
         rospy.loginfo(f"Random center position for the figure-eight: x={self.center_x}, y={self.center_y}")
 
-        # Teleport the turtle to the random center position
+        # Teleport the turtle to the random center position without leaving a trace
         self.teleport_to_position(self.center_x, self.center_y)
 
         # Start the turtle movement
@@ -47,6 +47,9 @@ class RandomFigureEight:
 
     def teleport_to_position(self, x, y):
         """ Teleports the turtle to a random position to start the figure-eight pattern. """
+        # Turn off the pen to avoid drawing a line during teleportation
+        self.set_pen_state(255, 255, 255, 1, 1)  # Turn pen off (use an arbitrary color, width, and 'off=1')
+
         # Wait for the teleport service to become available
         rospy.wait_for_service('/turtle1/teleport_absolute')
         try:
@@ -55,6 +58,21 @@ class RandomFigureEight:
             teleport_turtle(x, y, 0)  # Teleport turtle to (x, y) with theta = 0
         except rospy.ServiceException as e:
             rospy.logerr(f"Service call failed: {e}")
+
+        # Turn on the pen again after teleporting to start drawing
+        self.set_pen_state(0, 0, 0, 3, 0)  # Turn pen on (use black color and 'off=0')
+
+    def set_pen_state(self, r, g, b, width, off):
+        """ Set the pen state to control drawing lines.
+            r, g, b: Color of the pen.
+            width: Width of the pen line.
+            off: 1 to disable the pen, 0 to enable. """
+        rospy.wait_for_service('/turtle1/set_pen')
+        try:
+            set_pen = rospy.ServiceProxy('/turtle1/set_pen', SetPen)
+            set_pen(r, g, b, width, off)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to call set_pen service: {e}")
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
