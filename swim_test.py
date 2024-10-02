@@ -12,7 +12,7 @@ class FigureEightMover:
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
 
         # High precision value of Pi
-        pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899
+        pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196
 
         # Set linear and initial angular velocities
         linear_velocity = 2.0
@@ -46,7 +46,7 @@ class FigureEightMover:
 
     def keep_moving(self):
         """ Publishes the current movement command indefinitely. """
-        rate = rospy.Rate(100)  # 20 Hz rate
+        rate = rospy.Rate(1000)  # 20 Hz rate
 
         while not rospy.is_shutdown():
             # Publish the move command to make the turtle move
