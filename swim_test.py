@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist
-from turtlesim.srv import TeleportAbsolute  # Import the service definition for teleportation
 from turtlesim.msg import Pose
 
-class TeleportFigureEightMover:
+class PositionBasedFigureEight:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('teleport_figure_eight_mover', anonymous=False)
+        rospy.init_node('position_based_figure_eight', anonymous=False)
 
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
@@ -31,13 +30,10 @@ class TeleportFigureEightMover:
         self.center_y = 5.5
 
         # Threshold to determine if turtle is close to the center
-        self.position_threshold = 0.1
-
-        # Track the circle being completed (top or bottom)
-        self.completing_top_circle = True  # Start with the top circle
+        self.position_threshold = 0.05
 
         # Start the turtle movement
-        rospy.loginfo("Starting teleport-based figure-eight movement...")
+        rospy.loginfo("Starting figure-eight movement using position-based switching...")
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
@@ -48,11 +44,10 @@ class TeleportFigureEightMover:
 
         # Check if the turtle is near the center
         if self.is_near_center():
-            # If the turtle is near the center, teleport it back and switch direction
+            # If the turtle is near the center, switch direction if it hasn't already
             if not self.reached_center:
+                self.switch_direction()
                 self.reached_center = True  # Indicate that the turtle has reached the center
-                self.teleport_to_center()  # Teleport to the center and adjust orientation
-                self.switch_direction()    # Change direction to form the next circle
         else:
             # Reset the flag when the turtle is not at the center
             self.reached_center = False
@@ -62,38 +57,13 @@ class TeleportFigureEightMover:
         return abs(self.turtle_pose.x - self.center_x) < self.position_threshold and \
                abs(self.turtle_pose.y - self.center_y) < self.position_threshold
 
-    def teleport_to_center(self):
-        """ Teleport the turtle to the center of the screen and set its orientation. """
-        rospy.wait_for_service('/turtle1/teleport_absolute')
-        try:
-            teleport_service = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
-
-            # Determine the orientation to set based on the circle being completed
-            if self.completing_top_circle:
-                # If completing the top circle, face left (theta = pi or 180 degrees)
-                theta = 3.14159
-            else:
-                # If completing the bottom circle, face right (theta = 0 degrees)
-                theta = 0.0
-
-            # Teleport the turtle to the center with the calculated orientation
-            teleport_service(self.center_x, self.center_y, theta)
-            rospy.loginfo(f"Turtle teleported to center. New orientation: {theta} radians.")
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
-
     def switch_direction(self):
         """ Switch the direction of the turtle's angular velocity to form the figure-eight pattern. """
+        # Log the switch event
+        rospy.loginfo(f"Switching direction at position: x={self.turtle_pose.x}, y={self.turtle_pose.y}")
+
         # Reverse the direction of angular velocity
         self.move_cmd.angular.z = -self.move_cmd.angular.z
-
-        # Log the switch event and update the circle being completed
-        if self.completing_top_circle:
-            rospy.loginfo("Switched direction to complete bottom circle.")
-            self.completing_top_circle = False  # Now complete the bottom circle
-        else:
-            rospy.loginfo("Switched direction to complete top circle.")
-            self.completing_top_circle = True  # Now complete the top circle
 
     def keep_moving(self):
         """ Keep publishing the move command indefinitely. """
@@ -111,6 +81,6 @@ class TeleportFigureEightMover:
 
 if __name__ == '__main__':
     try:
-        TeleportFigureEightMover()
+        PositionBasedFigureEight()
     except rospy.ROSInterruptException:
-        rospy.loginfo("Teleport-based figure-eight movement node terminated.")
+        rospy.loginfo("Position-based figure-eight movement node terminated.")
