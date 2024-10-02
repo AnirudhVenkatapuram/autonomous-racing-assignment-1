@@ -1,63 +1,76 @@
 #!/usr/bin/env python3
 import rospy
 from geometry_msgs.msg import Twist
-import math
+from turtlesim.msg import Pose
 
-class FigureEightMover:
+class PositionBasedFigureEight:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('figure_eight_mover', anonymous=False)
+        rospy.init_node('position_based_figure_eight', anonymous=False)
 
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
 
-        # Set the rate at which to send commands (100 Hz)
-        rate = rospy.Rate(100)  # 100 Hz
+        # Create a subscriber to the /turtle1/pose topic to get the turtle's position
+        rospy.Subscriber('/turtle1/pose', Pose, self.pose_callback)
+
+        # Initialize position variables
+        self.turtle_pose = Pose()
+        self.reached_center = False  # Keeps track of whether the turtle is near the center
 
         # Create the Twist message to control the turtle
         self.move_cmd = Twist()
-        stop_cmd = Twist()  # A Twist message to stop the turtle
 
         # Set initial linear and angular velocities
-        self.move_cmd.linear.x = 2.0
-        self.move_cmd.angular.z = 1.0
+        self.move_cmd.linear.x = 2.0  # Linear velocity
+        self.move_cmd.angular.z = 1.0  # Angular velocity
 
-        # High precision value of Pi
-        pi = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899
+        # Center position coordinates of the turtlesim
+        self.center_x = 5.5
+        self.center_y = 5.5
 
-        # Time required to complete one full circle using high precision pi
-        self.T = 2 * pi / self.move_cmd.angular.z
+        # Threshold to determine if turtle is close to the center
+        self.position_threshold = 0.1
 
-        # Counter to keep track of completed circles
-        self.circles_completed = 0
+        # Start the turtle movement
+        rospy.loginfo("Starting figure-eight movement using position-based switching...")
 
-        # Loop to move the turtle
-        start_time = rospy.Time.now()
+        # Start the loop to keep moving the turtle
+        self.keep_moving()
+
+    def pose_callback(self, data):
+        """ Callback function to get the current position of the turtle. """
+        self.turtle_pose = data
+
+        # Check if the turtle is near the center
+        if self.is_near_center():
+            # If the turtle is near the center, switch direction if it hasn't already
+            if not self.reached_center:
+                self.switch_direction()
+                self.reached_center = True  # Indicate that the turtle has reached the center
+        else:
+            # Reset the flag when the turtle is not at the center
+            self.reached_center = False
+
+    def is_near_center(self):
+        """ Check if the turtle is near the center of the screen. """
+        return abs(self.turtle_pose.x - self.center_x) < self.position_threshold and \
+               abs(self.turtle_pose.y - self.center_y) < self.position_threshold
+
+    def switch_direction(self):
+        """ Switch the direction of the turtle's angular velocity to form the figure-eight pattern. """
+        # Log the switch event
+        rospy.loginfo(f"Switching direction at position: x={self.turtle_pose.x}, y={self.turtle_pose.y}")
+
+        # Reverse the direction of angular velocity
+        self.move_cmd.angular.z = -self.move_cmd.angular.z
+
+    def keep_moving(self):
+        """ Keep publishing the move command indefinitely. """
+        rate = rospy.Rate(100)  # Increase rate to 100 Hz for smoother control
         while not rospy.is_shutdown():
-            elapsed_time = (rospy.Time.now() - start_time).to_sec()
-
-            # Publish the move command to make the turtle move in a circle
+            # Publish the move command to make the turtle move
             self.cmd_vel.publish(self.move_cmd)
-
-            # Check if one full circle is completed (elapsed_time >= T)
-            if elapsed_time >= self.T:
-                # Stop the turtle briefly
-                rospy.loginfo(f"Completed {self.circles_completed + 1} circle(s). Stopping briefly...")
-                self.cmd_vel.publish(stop_cmd)  # Stop the turtle
-                rospy.sleep(0.1)  # Wait for 0.1 seconds
-
-                # Switch angular velocity to reverse direction
-                self.move_cmd.angular.z = -self.move_cmd.angular.z
-
-                # Increment the circle counter
-                self.circles_completed += 1
-
-                # Reset the start time for the next circle
-                start_time = rospy.Time.now()
-
-                # Log the completion of a circle and direction switch
-                rospy.loginfo(f"Switching direction. Circles completed: {self.circles_completed}")
-
             rate.sleep()
 
     def shutdown(self):
@@ -68,6 +81,6 @@ class FigureEightMover:
 
 if __name__ == '__main__':
     try:
-        FigureEightMover()
+        PositionBasedFigureEight()
     except rospy.ROSInterruptException:
-        rospy.loginfo("Figure-eight movement node terminated.")
+        rospy.loginfo("Position-based figure-eight movement node terminated.")
