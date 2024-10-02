@@ -3,7 +3,6 @@ import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.srv import SetPen, TeleportAbsolute
 from std_srvs.srv import Empty
-import time
 
 class SquareDrawer:
     def __init__(self):
@@ -13,7 +12,7 @@ class SquareDrawer:
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
 
-        # Define services for setting the background color and pen
+        # Define services for setting the background color, clearing the screen, and teleporting
         rospy.wait_for_service('/clear')
         rospy.wait_for_service('/turtle1/set_pen')
         rospy.wait_for_service('/turtle1/teleport_absolute')
@@ -26,11 +25,14 @@ class SquareDrawer:
         # Get user input for the square's side length
         self.side_length = self.get_user_input("Enter the length of the side of the square (1 to 5): ", 1.0, 5.0)
 
-        # Change the background color to red
+        # Change the background color to red after user input
         self.change_background_to_red()
 
-        # Teleport the turtle to the starting position (bottom-left corner of the square)
+        # Teleport the turtle to the starting position (bottom-left corner of the square) and set orientation to zero
         self.teleport_to_start_position()
+
+        # Set the pen color and enable drawing before starting
+        self.set_pen_state(0, 0, 0, 3, 0)  # Pen color: Black, width: 3, pen enabled (off=0)
 
         # Draw the square with the specified side length
         self.draw_square(self.side_length)
@@ -53,13 +55,32 @@ class SquareDrawer:
     def change_background_to_red(self):
         """ Change the ocean background color to red. """
         rospy.loginfo("Changing the background color to red...")
-        self.set_pen(255, 0, 0, 3, 1)  # Change pen color to red (255, 0, 0)
-        self.clear_bg()  # Clear the screen with the new background color
+        try:
+            # Temporarily disable pen to prevent the turtle from drawing lines
+            self.set_pen(255, 0, 0, 5, 1)  # Red pen, thickness 5, pen off
+            self.clear_bg()  # Clear the screen to apply the red background
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to change background color: {e}")
 
     def teleport_to_start_position(self):
-        """ Teleport the turtle to the starting position at (1, 1). """
+        """ Teleport the turtle to the starting position at (1, 1) with a heading of 0 radians. """
         rospy.loginfo("Teleporting turtle to start position (1, 1)...")
-        self.teleport_turtle(1.0, 1.0, 0)  # Teleport to position (1, 1) with theta=0
+        try:
+            self.teleport_turtle(1.0, 1.0, 0.0)  # Teleport to position (1, 1) with orientation (theta) = 0 radians
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to teleport turtle: {e}")
+
+    def set_pen_state(self, r, g, b, width, off):
+        """ Set the pen state to control drawing lines.
+            r, g, b: Color of the pen.
+            width: Width of the pen line.
+            off: 1 to disable the pen, 0 to enable. """
+        rospy.wait_for_service('/turtle1/set_pen')
+        try:
+            set_pen = rospy.ServiceProxy('/turtle1/set_pen', SetPen)
+            set_pen(r, g, b, width, off)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to call set_pen service: {e}")
 
     def draw_square(self, side_length):
         """ Draw a square with the given side length. """
