@@ -27,10 +27,10 @@ class SquareDrawer:
         # Get user input for the square's side length
         self.side_length = self.get_user_input("Enter the length of the side of the square (1 to 5): ", 1.0, 5.0)
 
-        # Change the background color to red using parameters immediately after receiving user input
+        # Change the background color to red immediately after receiving user input
         self.change_background_color_to_red()
 
-        # Teleport the turtle to the starting position (bottom-left corner of the square) and set orientation to zero
+        # Teleport the turtle to the starting position (bottom-left corner of the square) without drawing any lines
         self.teleport_to_start_position()
 
         # Set the pen color and enable drawing before starting
@@ -70,12 +70,20 @@ class SquareDrawer:
             rospy.logerr(f"Failed to clear screen for background color change: {e}")
 
     def teleport_to_start_position(self):
-        """ Teleport the turtle to the starting position at (1, 1) with a heading of 0 radians. """
-        rospy.loginfo("Teleporting turtle to start position (1, 1)...")
+        """ Teleport the turtle to the starting position at (1, 1) without drawing lines. """
+        rospy.loginfo("Teleporting turtle to start position (1, 1) without drawing lines...")
+
+        # Disable the pen before teleporting to avoid drawing lines
+        self.set_pen_state(255, 255, 255, 5, 1)  # Disable pen (off=1) with an arbitrary color
+
         try:
-            self.teleport_turtle(1.0, 1.0, 0.0)  # Teleport to position (1, 1) with orientation (theta) = 0 radians
+            # Teleport to position (1, 1) with orientation (theta) = 0 radians
+            self.teleport_turtle(1.0, 1.0, 0.0)
         except rospy.ServiceException as e:
             rospy.logerr(f"Failed to teleport turtle: {e}")
+
+        # Re-enable the pen after teleporting to start drawing
+        self.set_pen_state(0, 0, 0, 3, 0)  # Enable pen (off=0) with black color and width 3
 
     def set_pen_state(self, r, g, b, width, off):
         """ Set the pen state to control drawing lines.
