@@ -2,6 +2,8 @@
 import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
+from turtlesim.srv import TeleportAbsolute  # Import the teleport service
+import math
 
 class PositionBasedFigureEight:
     def __init__(self):
@@ -38,6 +40,13 @@ class PositionBasedFigureEight:
             rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
                           f"angular velocity = {self.move_cmd.angular.z}")
 
+        # Service client to teleport the turtle
+        rospy.wait_for_service('/turtle1/teleport_absolute')
+        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
+
+        # Initialize last teleport time to prevent rapid teleportation
+        self.last_teleport_time = rospy.Time.now()
+
         # Start the turtle movement
         rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
                       f"and angular velocity: {self.move_cmd.angular.z}")
@@ -63,6 +72,12 @@ class PositionBasedFigureEight:
 
         # Check if the turtle is near the center
         if self.is_near_center():
+            # Check if enough time has passed since the last teleport to prevent frequent teleportation
+            current_time = rospy.Time.now()
+            if current_time - self.last_teleport_time > rospy.Duration(0.25):  # 0.25 seconds interval
+                self.teleport_to_center()
+                self.last_teleport_time = current_time  # Update the last teleport time
+
             # If the turtle is near the center, switch direction if it hasn't already
             if not self.reached_center:
                 self.switch_direction()
@@ -83,6 +98,15 @@ class PositionBasedFigureEight:
 
         # Reverse the direction of angular velocity
         self.move_cmd.angular.z = -self.move_cmd.angular.z
+
+    def teleport_to_center(self):
+        """ Teleport the turtle to the center of the screen. """
+        rospy.loginfo(f"Teleporting turtle to center: x={self.center_x}, y={self.center_y}")
+        try:
+            # Teleport the turtle to the center position (5.5, 5.5) with no rotation (theta=0)
+            self.teleport_turtle(self.center_x, self.center_y, 0.0)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to teleport turtle to center: {e}")
 
     def keep_moving(self):
         """ Keep publishing the move command indefinitely. """
