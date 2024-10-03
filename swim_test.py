@@ -29,16 +29,16 @@ class CircleWithTeleport:
         # Keep track of the last teleportation time to avoid frequent teleports
         self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
+        # Get user inputs for linear and angular velocities
+        self.move_cmd = Twist()
+        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
+        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
+
         # Initialize the teleportation service
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
         rospy.wait_for_service('/turtle1/teleport_absolute')
         self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
         rospy.loginfo("/turtle1/teleport_absolute service is now available.")
-
-        # Get user input for linear and angular velocities
-        self.move_cmd = Twist()
-        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
-        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
 
         # Start the turtle movement
         rospy.loginfo(f"Starting circle movement with linear velocity: {self.move_cmd.linear.x} "
