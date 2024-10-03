@@ -29,16 +29,16 @@ class CircleWithTeleport:
         # Keep track of the last teleportation time to avoid frequent teleports
         self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
-        # Use a constant linear and angular velocity for the circle
-        self.move_cmd = Twist()
-        self.move_cmd.linear.x = 2.0  # Constant linear speed
-        self.move_cmd.angular.z = 1.0  # Constant angular speed
-
         # Initialize the teleportation service
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
         rospy.wait_for_service('/turtle1/teleport_absolute')
         self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
         rospy.loginfo("/turtle1/teleport_absolute service is now available.")
+
+        # Get user input for linear and angular velocities
+        self.move_cmd = Twist()
+        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
+        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
 
         # Start the turtle movement
         rospy.loginfo(f"Starting circle movement with linear velocity: {self.move_cmd.linear.x} "
@@ -46,6 +46,18 @@ class CircleWithTeleport:
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
+
+    def get_user_input(self, prompt, min_val, max_val):
+        """ Get a valid user input between min_val and max_val. """
+        while True:
+            try:
+                value = float(input(prompt))
+                if min_val <= value <= max_val:
+                    return value
+                else:
+                    print(f"Please enter a value between {min_val} and {max_val}.")
+            except ValueError:
+                print("Invalid input. Please enter a numeric value.")
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
