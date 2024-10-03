@@ -2,12 +2,11 @@
 import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
-from turtlesim.srv import TeleportAbsolute
 
-class SwimTest:
+class PositionBasedFigureEight:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('swim_test', anonymous=False)
+        rospy.init_node('position_based_figure_eight', anonymous=False)
 
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
@@ -29,23 +28,43 @@ class SwimTest:
         # Keep track of the last teleportation time to avoid frequent teleports
         self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
-        # Get linear and angular velocities from ROS parameters or use default values
+        # Get user input for linear and angular velocities
         self.move_cmd = Twist()
-        self.move_cmd.linear.x = rospy.get_param("~linear_velocity", 3.0)  # Default linear velocity is 3.0
-        self.move_cmd.angular.z = rospy.get_param("~angular_velocity", 1.5)  # Default angular velocity is 1.5
 
-        # Initialize the teleportation service
-        rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
-        rospy.wait_for_service('/turtle1/teleport_absolute')
-        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
-        rospy.loginfo("/turtle1/teleport_absolute service is now available.")
+        # Try to get user input; if an EOFError occurs, fallback to default values
+        try:
+            self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
+            self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
+        except EOFError:
+            # Default values if input is not possible or EOFError occurs
+            self.move_cmd.linear.x = 3.0
+            self.move_cmd.angular.z = 1.5
+            rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
+                          f"angular velocity = {self.move_cmd.angular.z}")
 
         # Start the turtle movement
-        rospy.loginfo(f"Starting circle movement using linear velocity: {self.move_cmd.linear.x} "
+        rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
                       f"and angular velocity: {self.move_cmd.angular.z}")
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
+
+    def get_user_input(self, prompt, min_val, max_val):
+        """ Get a valid user input between min_val and max_val. """
+        while True:
+            try:
+                # Get user input from the terminal
+                value = float(input(prompt))
+                if min_val <= value <= max_val:
+                    return value
+                else:
+                    print(f"Please enter a value between {min_val} and {max_val}.")
+            except ValueError:
+                print("Invalid input. Please enter a numeric value.")
+            except EOFError:
+                # This will catch the EOFError and handle it gracefully
+                print("No input detected, using default values.")
+                raise EOFError
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
@@ -55,24 +74,14 @@ class SwimTest:
         if self.is_near_start():
             # Check if enough time has passed since the last teleport to prevent frequent teleportation
             current_time = rospy.Time.now()
-            # Only teleport if at least 0.25 seconds have passed since the last teleport
-            if current_time - self.last_teleport_time > rospy.Duration(0.25):
-                self.teleport_to_start()
+            if current_time - self.last_teleport_time > rospy.Duration(0.25):  # Only teleport if at least 0.25 seconds have passed
+                rospy.loginfo(f"Teleporting turtle to start position: x={self.start_x}, y={self.start_y}")
                 self.last_teleport_time = current_time  # Update the last teleport time
 
     def is_near_start(self):
         """ Check if the turtle is near the start position of the circle. """
         return abs(self.turtle_pose.x - self.start_x) < self.position_threshold and \
                abs(self.turtle_pose.y - self.start_y) < self.position_threshold
-
-    def teleport_to_start(self):
-        """ Teleport the turtle to the starting position of the circle. """
-        rospy.loginfo(f"Teleporting turtle to start position: x={self.start_x}, y={self.start_y}")
-        try:
-            # Teleport the turtle to the start position (5.5, 5.5) with no rotation (theta=0)
-            self.teleport_turtle(self.start_x, self.start_y, 0.0)
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Failed to teleport turtle to start: {e}")
 
     def keep_moving(self):
         """ Keep publishing the move command indefinitely. """
@@ -90,6 +99,6 @@ class SwimTest:
 
 if __name__ == '__main__':
     try:
-        SwimTest()
+        PositionBasedFigureEight()
     except rospy.ROSInterruptException:
-        rospy.loginfo("Circle movement node terminated.")
+        rospy.loginfo("Position-based figure-eight movement node terminated.")
