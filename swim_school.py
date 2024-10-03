@@ -3,7 +3,6 @@ import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
 from turtlesim.srv import TeleportAbsolute  # Import the teleport service
-import math
 
 class PositionBasedFigureEight:
     def __init__(self):
@@ -45,7 +44,7 @@ class PositionBasedFigureEight:
         self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
 
         # Initialize last teleport time to prevent rapid teleportation
-        self.last_teleport_time = rospy.Time.now()
+        self.last_teleport_time = rospy.Time.now()  # Initialize here
 
         # Start the turtle movement
         rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
