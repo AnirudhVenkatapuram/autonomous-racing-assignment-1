@@ -3,6 +3,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
 from turtlesim.srv import TeleportAbsolute
+import sys
 
 class CircleWithTeleport:
     def __init__(self):
@@ -31,8 +32,18 @@ class CircleWithTeleport:
 
         # Get user inputs for linear and angular velocities
         self.move_cmd = Twist()
-        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
-        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
+
+        # Use default values or command-line arguments for linear and angular velocities
+        if len(sys.argv) > 1:
+            # If command-line arguments are provided, use them
+            self.move_cmd.linear.x = float(sys.argv[1])
+            self.move_cmd.angular.z = float(sys.argv[2])
+        else:
+            # Use default values if input() is not available
+            self.move_cmd.linear.x = 3.0  # Default linear velocity
+            self.move_cmd.angular.z = 1.5  # Default angular velocity
+            rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
+                          f"angular velocity = {self.move_cmd.angular.z}")
 
         # Initialize the teleportation service properly
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
@@ -50,18 +61,6 @@ class CircleWithTeleport:
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
-
-    def get_user_input(self, prompt, min_val, max_val):
-        """ Get a valid user input between min_val and max_val. """
-        while True:
-            try:
-                value = float(input(prompt))
-                if min_val <= value <= max_val:
-                    return value
-                else:
-                    print(f"Please enter a value between {min_val} and {max_val}.")
-            except ValueError:
-                print("Invalid input. Please enter a numeric value.")
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
