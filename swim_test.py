@@ -34,11 +34,15 @@ class CircleWithTeleport:
         self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
         self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
 
-        # Initialize the teleportation service
+        # Initialize the teleportation service properly
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
-        rospy.wait_for_service('/turtle1/teleport_absolute')
-        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
-        rospy.loginfo("/turtle1/teleport_absolute service is now available.")
+        try:
+            rospy.wait_for_service('/turtle1/teleport_absolute', timeout=5)
+            self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
+            rospy.loginfo("/turtle1/teleport_absolute service is now available.")
+        except rospy.ROSException as e:
+            rospy.logerr(f"Service /turtle1/teleport_absolute not available: {e}")
+            return  # Exit if the service is not available
 
         # Start the turtle movement
         rospy.loginfo(f"Starting circle movement with linear velocity: {self.move_cmd.linear.x} "
