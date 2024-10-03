@@ -3,7 +3,6 @@ import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
 from turtlesim.srv import TeleportAbsolute
-import sys
 
 class CircleWithTeleport:
     def __init__(self):
@@ -30,37 +29,35 @@ class CircleWithTeleport:
         # Keep track of the last teleportation time to avoid frequent teleports
         self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
-        # Get user inputs for linear and angular velocities
+        # Get user input for linear and angular velocities
         self.move_cmd = Twist()
+        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
+        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
 
-        # Use default values or command-line arguments for linear and angular velocities
-        if len(sys.argv) > 1:
-            # If command-line arguments are provided, use them
-            self.move_cmd.linear.x = float(sys.argv[1])
-            self.move_cmd.angular.z = float(sys.argv[2])
-        else:
-            # Use default values if input() is not available
-            self.move_cmd.linear.x = 3.0  # Default linear velocity
-            self.move_cmd.angular.z = 1.5  # Default angular velocity
-            rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
-                          f"angular velocity = {self.move_cmd.angular.z}")
-
-        # Initialize the teleportation service properly
+        # Initialize the teleportation service
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
-        try:
-            rospy.wait_for_service('/turtle1/teleport_absolute', timeout=5)
-            self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
-            rospy.loginfo("/turtle1/teleport_absolute service is now available.")
-        except rospy.ROSException as e:
-            rospy.logerr(f"Service /turtle1/teleport_absolute not available: {e}")
-            return  # Exit if the service is not available
+        rospy.wait_for_service('/turtle1/teleport_absolute')
+        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
+        rospy.loginfo("/turtle1/teleport_absolute service is now available.")
 
         # Start the turtle movement
-        rospy.loginfo(f"Starting circle movement with linear velocity: {self.move_cmd.linear.x} "
+        rospy.loginfo(f"Starting circle movement using linear velocity: {self.move_cmd.linear.x} "
                       f"and angular velocity: {self.move_cmd.angular.z}")
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
+
+    def get_user_input(self, prompt, min_val, max_val):
+        """ Get a valid user input between min_val and max_val. """
+        while True:
+            try:
+                value = float(input(prompt))  # Get the user input as a float value
+                if min_val <= value <= max_val:
+                    return value
+                else:
+                    print(f"Please enter a value between {min_val} and {max_val}.")
+            except ValueError:
+                print("Invalid input. Please enter a numeric value.")
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
@@ -70,11 +67,8 @@ class CircleWithTeleport:
         if self.is_near_start():
             # Check if enough time has passed since the last teleport to prevent frequent teleportation
             current_time = rospy.Time.now()
+            # Only teleport if at least 0.25 seconds have passed since the last teleport
             if current_time - self.last_teleport_time > rospy.Duration(0.25):
-                # Switch the angular velocity to the negative value right before teleporting
-                self.switch_angular_velocity()
-                
-                # Teleport to the start position
                 self.teleport_to_start()
                 self.last_teleport_time = current_time  # Update the last teleport time
 
@@ -82,11 +76,6 @@ class CircleWithTeleport:
         """ Check if the turtle is near the start position of the circle. """
         return abs(self.turtle_pose.x - self.start_x) < self.position_threshold and \
                abs(self.turtle_pose.y - self.start_y) < self.position_threshold
-
-    def switch_angular_velocity(self):
-        """ Switch the direction of the turtle's angular velocity. """
-        rospy.loginfo(f"Switching angular velocity from {self.move_cmd.angular.z} to {-self.move_cmd.angular.z}")
-        self.move_cmd.angular.z = -self.move_cmd.angular.z  # Reverse the angular velocity
 
     def teleport_to_start(self):
         """ Teleport the turtle to the starting position of the circle. """
