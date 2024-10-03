@@ -4,10 +4,10 @@ from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
 from turtlesim.srv import TeleportAbsolute
 
-class CircleWithTeleport:
+class SwimTest:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('circle_with_teleport', anonymous=False)
+        rospy.init_node('swim_test', anonymous=False)
 
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
@@ -29,10 +29,10 @@ class CircleWithTeleport:
         # Keep track of the last teleportation time to avoid frequent teleports
         self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
-        # Get user input for linear and angular velocities
+        # Get linear and angular velocities from ROS parameters or use default values
         self.move_cmd = Twist()
-        self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
-        self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
+        self.move_cmd.linear.x = rospy.get_param("~linear_velocity", 3.0)  # Default linear velocity is 3.0
+        self.move_cmd.angular.z = rospy.get_param("~angular_velocity", 1.5)  # Default angular velocity is 1.5
 
         # Initialize the teleportation service
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
@@ -46,18 +46,6 @@ class CircleWithTeleport:
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
-
-    def get_user_input(self, prompt, min_val, max_val):
-        """ Get a valid user input between min_val and max_val. """
-        while True:
-            try:
-                value = float(input(prompt))  # Get the user input as a float value
-                if min_val <= value <= max_val:
-                    return value
-                else:
-                    print(f"Please enter a value between {min_val} and {max_val}.")
-            except ValueError:
-                print("Invalid input. Please enter a numeric value.")
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
@@ -102,6 +90,6 @@ class CircleWithTeleport:
 
 if __name__ == '__main__':
     try:
-        CircleWithTeleport()
+        SwimTest()
     except rospy.ROSInterruptException:
         rospy.loginfo("Circle movement node terminated.")
