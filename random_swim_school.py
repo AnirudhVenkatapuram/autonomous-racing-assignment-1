@@ -32,15 +32,15 @@ class RandomPositionFigureEight:
         self.move_cmd.linear.x = random.uniform(2.0, 6.0)  # Random linear velocity between 2 and 6
         self.move_cmd.angular.z = random.uniform(1.0, 3.0)  # Random angular velocity between 1 and 3
 
+        # Initialize the last teleport time to avoid frequent teleportation
+        self.last_teleport_time = rospy.Time.now()
+
         # Teleport the turtle to the random starting position before starting
         self.teleport_to_position(self.start_x, self.start_y)
 
         # Print the random values to the terminal
         rospy.loginfo(f"Starting figure-eight pattern from random position: x={self.start_x}, y={self.start_y}")
         rospy.loginfo(f"Random linear velocity: {self.move_cmd.linear.x}, Random angular velocity: {self.move_cmd.angular.z}")
-
-        # Keep track of the last teleportation time to avoid frequent teleports
-        self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
         # Start the turtle movement
         self.keep_moving()
@@ -89,8 +89,8 @@ class RandomPositionFigureEight:
             teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
             teleport_turtle(x, y, 0.0)  # Teleport turtle to (x, y) with theta = 0.0
 
-            # After teleportation, turn on the pen again
-            self.set_pen_state(0, 0, 0, 2, 0)  # Turn pen back on with black color and width 2
+            # After teleportation, turn on the pen again with the default color (black)
+            self.set_pen_state(0, 0, 0, 2, 0)  # Default black color with pen width 2
         except rospy.ServiceException as e:
             rospy.logerr(f"Teleportation failed: {e}")
 
