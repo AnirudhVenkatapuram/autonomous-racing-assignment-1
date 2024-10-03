@@ -9,10 +9,6 @@ class PositionBasedFigureEight:
         # Initialize the ROS node
         rospy.init_node('position_based_figure_eight', anonymous=False)
 
-        # Initialize last teleport time before setting up the subscriber to avoid attribute errors
-        self.last_teleport_time = rospy.Time.now()
-        rospy.loginfo(f"Initialized last_teleport_time to: {self.last_teleport_time.to_sec()} seconds")
-
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
 
@@ -30,6 +26,9 @@ class PositionBasedFigureEight:
         self.center_x = 5.5  # Initialize center_x attribute
         self.center_y = 5.5  # Initialize center_y attribute
 
+        # Keep track of the last teleportation time to avoid frequent teleports
+        self.last_teleport_time = rospy.Time.now()
+
         # Use default values for linear and angular velocities or command-line arguments
         self.move_cmd = Twist()
         # If input() is not available, use default values
@@ -43,18 +42,11 @@ class PositionBasedFigureEight:
             rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
                           f"angular velocity = {self.move_cmd.angular.z}")
 
-        # Wait for the teleport service to be available before setting up the proxy
+        # Initialize the teleportation service
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
         rospy.wait_for_service('/turtle1/teleport_absolute')
+        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
         rospy.loginfo("/turtle1/teleport_absolute service is now available.")
-
-        # Create the service proxy for teleportation and add debug information
-        try:
-            self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
-            rospy.loginfo("Successfully created the teleport service proxy.")
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Failed to create teleport service proxy: {e}")
-            self.teleport_turtle = None
 
         # Start the turtle movement
         rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
@@ -84,13 +76,8 @@ class PositionBasedFigureEight:
             # Check if enough time has passed since the last teleport to prevent frequent teleportation
             current_time = rospy.Time.now()
             if current_time - self.last_teleport_time > rospy.Duration(0.25):  # 0.25 seconds interval
-                rospy.loginfo(f"Time since last teleport: {current_time.to_sec() - self.last_teleport_time.to_sec()} seconds")
-                if self.teleport_turtle is not None:
-                    self.teleport_to_center()
-                    self.last_teleport_time = current_time  # Update the last teleport time
-                    rospy.loginfo(f"Updated last_teleport_time to: {self.last_teleport_time.to_sec()} seconds")
-                else:
-                    rospy.logerr("Teleport service proxy is not initialized.")
+                self.teleport_to_center()
+                self.last_teleport_time = current_time  # Update the last teleport time
 
             # If the turtle is near the center, switch direction if it hasn't already
             if not self.reached_center:
@@ -116,14 +103,11 @@ class PositionBasedFigureEight:
     def teleport_to_center(self):
         """ Teleport the turtle to the center of the screen. """
         rospy.loginfo(f"Teleporting turtle to center: x={self.center_x}, y={self.center_y}")
-        if self.teleport_turtle is not None:
-            try:
-                # Teleport the turtle to the center position (5.5, 5.5) with no rotation (theta=0)
-                self.teleport_turtle(self.center_x, self.center_y, 0.0)
-            except rospy.ServiceException as e:
-                rospy.logerr(f"Failed to teleport turtle to center: {e}")
-        else:
-            rospy.logerr("Teleport service proxy is not available.")
+        try:
+            # Teleport the turtle to the center position (5.5, 5.5) with no rotation (theta=0)
+            self.teleport_turtle(self.center_x, self.center_y, 0.0)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to teleport turtle to center: {e}")
 
     def keep_moving(self):
         """ Keep publishing the move command indefinitely. """
