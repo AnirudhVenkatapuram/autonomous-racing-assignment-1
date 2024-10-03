@@ -2,11 +2,12 @@
 import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
+from turtlesim.srv import TeleportAbsolute
 
-class PositionBasedFigureEight:
+class CircleWithTeleport:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node('position_based_figure_eight', anonymous=False)
+        rospy.init_node('circle_with_teleport', anonymous=False)
 
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
@@ -16,24 +17,32 @@ class PositionBasedFigureEight:
 
         # Initialize position variables
         self.turtle_pose = Pose()
-        self.reached_center = False  # Keeps track of whether the turtle is near the center
+        self.reached_start = False  # Keeps track of whether the turtle is near the start
 
-        # Create the Twist message to control the turtle
+        # Define position threshold for teleportation
+        self.position_threshold = 0.1  # Small threshold for detecting the start
+
+        # Define the starting position of the turtle
+        self.start_x = 5.5
+        self.start_y = 5.5
+
+        # Keep track of the last teleportation time to avoid frequent teleports
+        self.last_teleport_time = rospy.Time.now()
+
+        # Use a constant linear and angular velocity for the circle
         self.move_cmd = Twist()
+        self.move_cmd.linear.x = 2.0  # Constant linear speed
+        self.move_cmd.angular.z = 1.0  # Constant angular speed
 
-        # Set initial linear and angular velocities
-        self.move_cmd.linear.x = 2.0  # Linear velocity
-        self.move_cmd.angular.z = 1.0  # Angular velocity
-
-        # Center position coordinates of the turtlesim
-        self.center_x = 5.5
-        self.center_y = 5.5
-
-        # Threshold to determine if turtle is close to the center
-        self.position_threshold = 0.05
+        # Initialize the teleportation service
+        rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
+        rospy.wait_for_service('/turtle1/teleport_absolute')
+        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
+        rospy.loginfo("/turtle1/teleport_absolute service is now available.")
 
         # Start the turtle movement
-        rospy.loginfo("Starting figure-eight movement using position-based switching...")
+        rospy.loginfo(f"Starting circle movement with linear velocity: {self.move_cmd.linear.x} "
+                      f"and angular velocity: {self.move_cmd.angular.z}")
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
@@ -42,28 +51,27 @@ class PositionBasedFigureEight:
         """ Callback function to get the current position of the turtle. """
         self.turtle_pose = data
 
-        # Check if the turtle is near the center
-        if self.is_near_center():
-            # If the turtle is near the center, switch direction if it hasn't already
-            if not self.reached_center:
-                self.switch_direction()
-                self.reached_center = True  # Indicate that the turtle has reached the center
-        else:
-            # Reset the flag when the turtle is not at the center
-            self.reached_center = False
+        # Check if the turtle is near the start position
+        if self.is_near_start():
+            # Check if enough time has passed since the last teleport to prevent frequent teleportation
+            current_time = rospy.Time.now()
+            if current_time - self.last_teleport_time > rospy.Duration(0.25):  # 0.25 seconds interval
+                self.teleport_to_start()
+                self.last_teleport_time = current_time  # Update the last teleport time
 
-    def is_near_center(self):
-        """ Check if the turtle is near the center of the screen. """
-        return abs(self.turtle_pose.x - self.center_x) < self.position_threshold and \
-               abs(self.turtle_pose.y - self.center_y) < self.position_threshold
+    def is_near_start(self):
+        """ Check if the turtle is near the start position of the circle. """
+        return abs(self.turtle_pose.x - self.start_x) < self.position_threshold and \
+               abs(self.turtle_pose.y - self.start_y) < self.position_threshold
 
-    def switch_direction(self):
-        """ Switch the direction of the turtle's angular velocity to form the figure-eight pattern. """
-        # Log the switch event
-        rospy.loginfo(f"Switching direction at position: x={self.turtle_pose.x}, y={self.turtle_pose.y}")
-
-        # Reverse the direction of angular velocity
-        self.move_cmd.angular.z = -self.move_cmd.angular.z
+    def teleport_to_start(self):
+        """ Teleport the turtle to the starting position of the circle. """
+        rospy.loginfo(f"Teleporting turtle to start position: x={self.start_x}, y={self.start_y}")
+        try:
+            # Teleport the turtle to the start position (5.5, 5.5) with no rotation (theta=0)
+            self.teleport_turtle(self.start_x, self.start_y, 0.0)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Failed to teleport turtle to start: {e}")
 
     def keep_moving(self):
         """ Keep publishing the move command indefinitely. """
@@ -81,6 +89,6 @@ class PositionBasedFigureEight:
 
 if __name__ == '__main__':
     try:
-        PositionBasedFigureEight()
+        CircleWithTeleport()
     except rospy.ROSInterruptException:
-        rospy.loginfo("Position-based figure-eight movement node terminated.")
+        rospy.loginfo("Circle movement node terminated.")
