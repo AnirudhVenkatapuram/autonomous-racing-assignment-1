@@ -75,13 +75,24 @@ class PositionBasedFigureEight:
             # Check if enough time has passed since the last teleport to prevent frequent teleportation
             current_time = rospy.Time.now()
             if current_time - self.last_teleport_time > rospy.Duration(0.25):  # Only teleport if at least 0.25 seconds have passed
-                rospy.loginfo(f"Teleporting turtle to start position: x={self.start_x}, y={self.start_y}")
                 self.last_teleport_time = current_time  # Update the last teleport time
+                self.teleport_to_start()  # Teleport the turtle to the starting position
 
     def is_near_start(self):
         """ Check if the turtle is near the start position of the circle. """
         return abs(self.turtle_pose.x - self.start_x) < self.position_threshold and \
                abs(self.turtle_pose.y - self.start_y) < self.position_threshold
+
+    def teleport_to_start(self):
+        """ Teleport the turtle to the starting position. """
+        # Remove the logging statement to avoid printing teleport messages repeatedly
+        # rospy.loginfo(f"Teleporting turtle to start position: x={self.start_x}, y={self.start_y}")
+
+        # Use a service call to teleport the turtle (replace 'self.teleport_turtle' with actual teleport service)
+        try:
+            self.teleport_turtle(self.start_x, self.start_y, 0.0)
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Teleportation failed: {e}")
 
     def keep_moving(self):
         """ Keep publishing the move command indefinitely. """
