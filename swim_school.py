@@ -45,7 +45,7 @@ class PositionBasedFigureEight:
         # Initialize the teleportation service
         rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
         rospy.wait_for_service('/turtle1/teleport_absolute')
-        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
+        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)  # Proper initialization
         rospy.loginfo("/turtle1/teleport_absolute service is now available.")
 
         # Start the turtle movement
