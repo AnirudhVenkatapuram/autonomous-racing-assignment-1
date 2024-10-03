@@ -9,6 +9,10 @@ class PositionBasedFigureEight:
         # Initialize the ROS node
         rospy.init_node('position_based_figure_eight', anonymous=False)
 
+        # Initialize last teleport time before setting up the subscriber to avoid attribute errors
+        self.last_teleport_time = rospy.Time.now()
+        rospy.loginfo(f"Initialized last_teleport_time to: {self.last_teleport_time.to_sec()} seconds")
+
         # Define a publisher to the /turtle1/cmd_vel topic
         self.cmd_vel = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
 
@@ -43,9 +47,6 @@ class PositionBasedFigureEight:
         rospy.wait_for_service('/turtle1/teleport_absolute')
         self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
 
-        # Initialize last teleport time to prevent rapid teleportation
-        self.last_teleport_time = rospy.Time.now()  # Initialize here
-
         # Start the turtle movement
         rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
                       f"and angular velocity: {self.move_cmd.angular.z}")
@@ -74,8 +75,10 @@ class PositionBasedFigureEight:
             # Check if enough time has passed since the last teleport to prevent frequent teleportation
             current_time = rospy.Time.now()
             if current_time - self.last_teleport_time > rospy.Duration(0.25):  # 0.25 seconds interval
+                rospy.loginfo(f"Time since last teleport: {current_time.to_sec() - self.last_teleport_time.to_sec()} seconds")
                 self.teleport_to_center()
                 self.last_teleport_time = current_time  # Update the last teleport time
+                rospy.loginfo(f"Updated last_teleport_time to: {self.last_teleport_time.to_sec()} seconds")
 
             # If the turtle is near the center, switch direction if it hasn't already
             if not self.reached_center:
