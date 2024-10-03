@@ -27,7 +27,7 @@ class CircleWithTeleport:
         self.start_y = 5.5
 
         # Keep track of the last teleportation time to avoid frequent teleports
-        self.last_teleport_time = rospy.Time.now()
+        self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
         # Use a constant linear and angular velocity for the circle
         self.move_cmd = Twist()
@@ -55,7 +55,8 @@ class CircleWithTeleport:
         if self.is_near_start():
             # Check if enough time has passed since the last teleport to prevent frequent teleportation
             current_time = rospy.Time.now()
-            if current_time - self.last_teleport_time > rospy.Duration(0.25):  # 0.25 seconds interval
+            # Only teleport if at least 0.25 seconds have passed since the last teleport
+            if current_time - self.last_teleport_time > rospy.Duration(0.25):
                 self.teleport_to_start()
                 self.last_teleport_time = current_time  # Update the last teleport time
 
