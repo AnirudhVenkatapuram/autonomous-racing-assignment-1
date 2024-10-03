@@ -43,8 +43,12 @@ class PositionBasedFigureEight:
             rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
                           f"angular velocity = {self.move_cmd.angular.z}")
 
-        # Service client to teleport the turtle
+        # Wait for the teleport service to be available before setting up the proxy
+        rospy.loginfo("Waiting for the /turtle1/teleport_absolute service to be available...")
         rospy.wait_for_service('/turtle1/teleport_absolute')
+        rospy.loginfo("/turtle1/teleport_absolute service is now available.")
+
+        # Create the service proxy for teleportation
         self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
 
         # Start the turtle movement
