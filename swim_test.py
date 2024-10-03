@@ -2,6 +2,7 @@
 import rospy
 from geometry_msgs.msg import Twist
 from turtlesim.msg import Pose
+from turtlesim.srv import TeleportAbsolute
 
 class PositionBasedFigureEight:
     def __init__(self):
@@ -28,19 +29,14 @@ class PositionBasedFigureEight:
         # Keep track of the last teleportation time to avoid frequent teleports
         self.last_teleport_time = rospy.Time.now()  # Store the last teleport time
 
-        # Get user input for linear and angular velocities
-        self.move_cmd = Twist()
+        # Define teleportation service proxy
+        rospy.wait_for_service('/turtle1/teleport_absolute')
+        self.teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
 
-        # Try to get user input; if an EOFError occurs, fallback to default values
-        try:
-            self.move_cmd.linear.x = self.get_user_input("Enter a linear velocity (2.0 to 6.0): ", 2.0, 6.0)
-            self.move_cmd.angular.z = self.get_user_input("Enter an angular velocity (1.0 to 3.0): ", 1.0, 3.0)
-        except EOFError:
-            # Default values if input is not possible or EOFError occurs
-            self.move_cmd.linear.x = 3.0
-            self.move_cmd.angular.z = 1.5
-            rospy.loginfo(f"Using default values: linear velocity = {self.move_cmd.linear.x}, "
-                          f"angular velocity = {self.move_cmd.angular.z}")
+        # Get user input directly for linear and angular velocities
+        self.move_cmd = Twist()
+        self.move_cmd.linear.x = float(input("Enter a linear velocity (2.0 to 6.0): "))
+        self.move_cmd.angular.z = float(input("Enter an angular velocity (1.0 to 3.0): "))
 
         # Start the turtle movement
         rospy.loginfo(f"Starting figure-eight movement using linear velocity: {self.move_cmd.linear.x} "
@@ -48,23 +44,6 @@ class PositionBasedFigureEight:
 
         # Start the loop to keep moving the turtle
         self.keep_moving()
-
-    def get_user_input(self, prompt, min_val, max_val):
-        """ Get a valid user input between min_val and max_val. """
-        while True:
-            try:
-                # Get user input from the terminal
-                value = float(input(prompt))
-                if min_val <= value <= max_val:
-                    return value
-                else:
-                    print(f"Please enter a value between {min_val} and {max_val}.")
-            except ValueError:
-                print("Invalid input. Please enter a numeric value.")
-            except EOFError:
-                # This will catch the EOFError and handle it gracefully
-                print("No input detected, using default values.")
-                raise EOFError
 
     def pose_callback(self, data):
         """ Callback function to get the current position of the turtle. """
@@ -85,12 +64,9 @@ class PositionBasedFigureEight:
 
     def teleport_to_start(self):
         """ Teleport the turtle to the starting position. """
-        # Remove the logging statement to avoid printing teleport messages repeatedly
-        # rospy.loginfo(f"Teleporting turtle to start position: x={self.start_x}, y={self.start_y}")
-
-        # Use a service call to teleport the turtle (replace 'self.teleport_turtle' with actual teleport service)
+        # Use a service call to teleport the turtle to the starting position
         try:
-            self.teleport_turtle(self.start_x, self.start_y, 0.0)
+            self.teleport_turtle(self.start_x, self.start_y, 0.0)  # Teleport to (start_x, start_y) with orientation 0.0
         except rospy.ServiceException as e:
             rospy.logerr(f"Teleportation failed: {e}")
 
