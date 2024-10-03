@@ -91,6 +91,7 @@ class RandomPositionFigureEight:
 
             # After teleportation, turn on the pen again with the default color (black)
             self.set_pen_state(0, 0, 0, 2, 0)  # Default black color with pen width 2
+            rospy.loginfo("Teleported to position and turned the pen back on.")
         except rospy.ServiceException as e:
             rospy.logerr(f"Teleportation failed: {e}")
 
