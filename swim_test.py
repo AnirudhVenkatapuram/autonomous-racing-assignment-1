@@ -55,6 +55,8 @@ class PositionBasedFigureEight:
             current_time = rospy.Time.now()
             if current_time - self.last_teleport_time > rospy.Duration(0.25):  # Only teleport if at least 0.25 seconds have passed
                 self.last_teleport_time = current_time  # Update the last teleport time
+                # Change the angular velocity direction right before teleporting
+                self.move_cmd.angular.z = -self.move_cmd.angular.z
                 self.teleport_to_start()  # Teleport the turtle to the starting position
 
     def is_near_start(self):
