@@ -27,8 +27,8 @@ class SquareDrawer:
         # Get user input for the square's side length
         self.side_length = self.get_user_input("Enter the length of the side of the square (1 to 5): ", 1.0, 5.0)
 
-        # Change the background color to red immediately after receiving user input
-        self.change_background_to_red()
+        # Change the background color to red using parameters immediately after receiving user input
+        self.change_background_color_to_red()
 
         # Teleport the turtle to the starting position (bottom-left corner of the square) and set orientation to zero
         self.teleport_to_start_position()
@@ -54,17 +54,16 @@ class SquareDrawer:
             except ValueError:
                 print("Invalid input. Please enter a numeric value.")
 
-    def change_background_to_red(self):
-        """ Change the ocean background color to red. """
-        rospy.loginfo("Changing the background color to red...")
+    def change_background_color_to_red(self):
+        """ Change the ocean background color to red using ROS parameters. """
+        rospy.loginfo("Changing the background color to red using ROS parameters...")
 
-        # Set the background color using the SetPen service (r=255, g=0, b=0) and disable the pen temporarily
-        try:
-            self.set_pen(255, 0, 0, 5, 1)  # Temporarily disable pen with red color
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Failed to set pen for background change: {e}")
+        # Set the background color parameters on the ROS parameter server
+        rospy.set_param('/turtlesim/background_r', 255)  # Red value
+        rospy.set_param('/turtlesim/background_g', 0)    # Green value
+        rospy.set_param('/turtlesim/background_b', 0)    # Blue value
 
-        # Clear the screen to apply the red background color
+        # Clear the screen to apply the new background color
         try:
             self.clear_bg()
         except rospy.ServiceException as e:
