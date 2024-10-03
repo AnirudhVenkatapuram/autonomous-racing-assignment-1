@@ -79,8 +79,8 @@ class RandomPositionFigureEight:
 
     def teleport_to_position(self, x, y):
         """ Teleport the turtle to a specified position (x, y). """
-        # Turn off the pen to avoid drawing a line during teleportation
-        self.set_pen_state(255, 255, 255, 1, 1)  # Set pen state to off (use any color and width)
+        # Set pen color to match the background (blue) during teleport to create the visual effect of no line
+        self.set_pen_state(70, 130, 180, 2, 0)  # Blue background color in turtlesim (R=70, G=130, B=180)
 
         # Wait for the teleport service to become available
         rospy.wait_for_service('/turtle1/teleport_absolute')
@@ -89,9 +89,9 @@ class RandomPositionFigureEight:
             teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
             teleport_turtle(x, y, 0.0)  # Teleport turtle to (x, y) with theta = 0.0
 
-            # After teleportation, turn on the pen again with the default color (black)
+            # After teleportation, turn the pen back to black
             self.set_pen_state(0, 0, 0, 2, 0)  # Default black color with pen width 2
-            rospy.loginfo("Teleported to position and turned the pen back on.")
+            rospy.loginfo(f"Teleported to position ({x}, {y}) and turned the pen back to black.")
         except rospy.ServiceException as e:
             rospy.logerr(f"Teleportation failed: {e}")
 
