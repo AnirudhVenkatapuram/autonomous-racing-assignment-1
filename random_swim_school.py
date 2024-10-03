@@ -35,8 +35,8 @@ class RandomPositionFigureEight:
         # Initialize the last teleport time to avoid frequent teleportation
         self.last_teleport_time = rospy.Time.now()
 
-        # Teleport the turtle to the random starting position before starting
-        self.teleport_to_position(self.start_x, self.start_y)
+        # Teleport the turtle to the random starting position before starting (turn off pen initially)
+        self.teleport_to_position(self.start_x, self.start_y, pen_off=True)
 
         # Print the random values to the terminal
         rospy.loginfo(f"Starting figure-eight pattern from random position: x={self.start_x}, y={self.start_y}")
@@ -66,7 +66,7 @@ class RandomPositionFigureEight:
                 self.last_teleport_time = current_time  # Update the last teleport time
                 # Change the angular velocity direction right before teleporting
                 self.move_cmd.angular.z = -self.move_cmd.angular.z
-                self.teleport_to_start()  # Teleport the turtle to the starting position
+                self.teleport_to_start()  # Teleport the turtle to the starting position without turning off the pen
 
     def is_near_start(self):
         """ Check if the turtle is near the start position of the circle. """
@@ -74,13 +74,14 @@ class RandomPositionFigureEight:
                abs(self.turtle_pose.y - self.start_y) < self.position_threshold
 
     def teleport_to_start(self):
-        """ Teleport the turtle back to the starting position. """
-        self.teleport_to_position(self.start_x, self.start_y)
+        """ Teleport the turtle back to the starting position with the pen turned on. """
+        self.teleport_to_position(self.start_x, self.start_y, pen_off=False)
 
-    def teleport_to_position(self, x, y):
-        """ Teleport the turtle to a specified position (x, y). """
-        # Set pen color to match the background (blue) during teleport to create the visual effect of no line
-        self.set_pen_state(70, 130, 180, 2, 0)  # Blue background color in turtlesim (R=70, G=130, B=180)
+    def teleport_to_position(self, x, y, pen_off):
+        """ Teleport the turtle to a specified position (x, y). If pen_off is True, turn the pen off during teleportation. """
+        if pen_off:
+            # Turn off the pen to avoid drawing a line during the initial teleportation
+            self.set_pen_state(255, 255, 255, 1, 1)  # Set pen state to off (use any color and width)
 
         # Wait for the teleport service to become available
         rospy.wait_for_service('/turtle1/teleport_absolute')
@@ -89,9 +90,12 @@ class RandomPositionFigureEight:
             teleport_turtle = rospy.ServiceProxy('/turtle1/teleport_absolute', TeleportAbsolute)
             teleport_turtle(x, y, 0.0)  # Teleport turtle to (x, y) with theta = 0.0
 
-            # After teleportation, turn the pen back to black
-            self.set_pen_state(0, 0, 0, 2, 0)  # Default black color with pen width 2
-            rospy.loginfo(f"Teleported to position ({x}, {y}) and turned the pen back to black.")
+            # After teleportation, turn on the pen again with the default color (black) only if pen_off was True
+            if pen_off:
+                self.set_pen_state(0, 0, 0, 2, 0)  # Default black color with pen width 2 and pen on
+                rospy.loginfo("Teleported to initial position with pen turned off, pen turned back on now.")
+            else:
+                rospy.loginfo("Teleported to position with pen on (drawing).")
         except rospy.ServiceException as e:
             rospy.logerr(f"Teleportation failed: {e}")
 
